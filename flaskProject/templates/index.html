@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Height Predictor</title>
+    <style>
+        .stopwatch {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+        .stopwatch button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .stopwatch-display {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Height-O-Meter</h1>
+    <form id="prediction-form">
+        <label for="time">Time (seconds):</label>
+        <input type="number" id="time" name="time" step="0.0001" min="0" required>
+        <input type="submit" value="Predict Height">
+    </form>
+    <div id="result"></div>
+
+    <!-- Stopwatch UI -->
+    <div class="stopwatch">
+        <div class="stopwatch-display" id="stopwatch-display">0.0000</div>
+        <button id="toggle-btn">Start</button>
+        <button id="reset-btn">Reset</button>
+    </div>
+
+    <script>
+        // Stopwatch functionality
+        let startTime, updatedTime, difference, timerInterval;
+        let isRunning = false;
+        const display = document.getElementById('stopwatch-display');
+        const toggleBtn = document.getElementById('toggle-btn');
+
+        function startTimer() {
+            startTime = new Date().getTime() - (difference || 0);
+            timerInterval = setInterval(() => {
+                updatedTime = new Date().getTime();
+                difference = (updatedTime - startTime) / 1000;
+                display.textContent = difference.toFixed(4); // Show up to 4 decimal places
+            }, 10); // Update every 10 milliseconds
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        toggleBtn.addEventListener('click', function() {
+            if (isRunning) {
+                stopTimer();
+                toggleBtn.textContent = 'Start';
+            } else {
+                startTimer();
+                toggleBtn.textContent = 'Stop';
+            }
+            isRunning = !isRunning;
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', function() {
+            clearInterval(timerInterval);
+            display.textContent = "0.0000";
+            difference = 0;
+            isRunning = false;
+            toggleBtn.textContent = 'Start';
+        });
+
+        // Prediction form handling
+        document.getElementById('prediction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var time = document.getElementById('time').value;
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'time=' + encodeURIComponent(time)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('result').textContent = 'Error: ' + data.error;
+                } else {
+                    document.getElementById('result').innerHTML = '<h2>Predicted Height</h2><p>' + data.height.toFixed(4) + ' cm</p>';
+                }
+            })
+            .catch(() => {
+                document.getElementById('result').textContent = 'An error occurred. Please try again.';
+            });
+        });
+    </script>
+</body>
+</html>
